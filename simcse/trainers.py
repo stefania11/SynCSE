@@ -254,7 +254,26 @@ class CLTrainer(Trainer):
         train_dataset_is_sized = isinstance(self.train_dataset, collections.abc.Sized)
 
         # Data loader and number of training steps
-        train_dataloader = self.get_train_dataloader()
+        # Check if distributed training is enabled and set up DistributedSampler
+        if self.args.local_rank != -1:
+            train_sampler = DistributedSampler(self.train_dataset, shuffle=True)
+            train_dataloader = DataLoader(
+                self.train_dataset,
+                batch_size=self.args.train_batch_size,
+                sampler=train_sampler,
+                collate_fn=self.data_collator,
+                drop_last=self.args.dataloader_drop_last,
+            )
+        else:
+            train_sampler = None
+            # DataLoader without DistributedSampler for non-distributed training
+            train_dataloader = DataLoader(
+                self.train_dataset,
+                batch_size=self.args.train_batch_size,
+                shuffle=True,
+                collate_fn=self.data_collator,
+                drop_last=self.args.dataloader_drop_last,
+            )
 
         # Setting up training control variables:
         # number of training epochs: num_train_epochs
@@ -391,8 +410,9 @@ class CLTrainer(Trainer):
                 for _ in train_dataloader:
                     break
         for epoch in range(epochs_trained, num_train_epochs):
-            if isinstance(train_dataloader, DataLoader) and isinstance(train_dataloader.sampler, DistributedSampler):
-                train_dataloader.sampler.set_epoch(epoch)
+            if isinstance(train_dataloader, DataLoader):
+                if hasattr(train_dataloader.sampler, 'set_epoch'):
+                    train_dataloader.sampler.set_epoch(epoch)
             epoch_iterator = train_dataloader
 
             # Reset the past mems state at the beginning of each epoch if necessary.
