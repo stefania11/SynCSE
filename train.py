@@ -575,10 +575,10 @@ def main():
 
             # Need to save the state, since Trainer.save_model saves only the tokenizer with the model
             trainer.state.save_to_json(os.path.join(training_args.output_dir, "trainer_state.json"))
-    except Exception as e:
-        print(f'An error occurred during training: {e}')
-            raise e
-print("Training loop completed.")
+        except Exception as e:
+            print(f'An error occurred during training: {e}')
+        raise e
+    print("Training loop completed.")
 
     # Evaluation
     results = {}
