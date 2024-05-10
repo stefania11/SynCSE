@@ -53,7 +53,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Un
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Dataset
 
-# Removed TPU-specific code for saving optimizer states as TPUs are not available
+# TPU-specific code has been removed as TPUs are not available in the current setup
 
 if is_apex_available():
     from apex import amp
@@ -65,7 +65,6 @@ if version.parse(torch.__version__) >= version.parse("1.6"):
 if is_datasets_available():
     import datasets
 
-from transformers.trainer import _model_unwrap
 from transformers.optimization import Adafactor, AdamW, get_scheduler
 import copy
 
@@ -141,13 +140,12 @@ class CLTrainer(Trainer):
 
     def _save_checkpoint(self, model, trial, metrics=None):
         """
-        Compared to original implementation, we change the saving policy to
-        only save the best-validation checkpoints.
+        Save model checkpoint during training. If metrics are provided and a metric_for_best_model is set in the
+        TrainingArguments, the best model according to this metric is saved.
         """
-
         # In all cases, including ddp/dp/deepspeed, self.model is always a reference to the model we
         # want to save.
-        assert _model_unwrap(model) is self.model, "internal model should be a reference to self.model"
+        assert self.accelerator.unwrap_model(model) is self.model, "internal model should be a reference to self.model"
 
         # Determine the new best metric / best model checkpoint
         if metrics is not None and self.args.metric_for_best_model is not None:
@@ -175,13 +173,7 @@ class CLTrainer(Trainer):
                 if self.sharded_dpp:
                     self.optimizer.consolidate_state_dict()
 
-                if is_torch_tpu_available():
-                    xm.rendezvous("saving_optimizer_states")
-                    xm.save(self.optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
-                    with warnings.catch_warnings(record=True) as caught_warnings:
-                        xm.save(self.lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
-                        reissue_pt_warnings(caught_warnings)
-                elif self.is_world_process_zero() and not self.deepspeed:
+                if self.is_world_process_zero() and not self.deepspeed:
                     # deepspeed.save_checkpoint above saves model/optim/sched
                     torch.save(self.optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
                     with warnings.catch_warnings(record=True) as caught_warnings:
@@ -217,13 +209,7 @@ class CLTrainer(Trainer):
             if self.sharded_dpp:
                 self.optimizer.consolidate_state_dict()
 
-            if is_torch_tpu_available():
-                xm.rendezvous("saving_optimizer_states")
-                xm.save(self.optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
-                with warnings.catch_warnings(record=True) as caught_warnings:
-                    xm.save(self.lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
-                    reissue_pt_warnings(caught_warnings)
-            elif self.is_world_process_zero() and not self.deepspeed:
+            if self.is_world_process_zero() and not self.deepspeed:
                 # deepspeed.save_checkpoint above saves model/optim/sched
                 torch.save(self.optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
                 with warnings.catch_warnings(record=True) as caught_warnings:
@@ -349,14 +335,11 @@ class CLTrainer(Trainer):
         # self.model_wrapped is DDP(Transformers Model), DDP(Deepspeed(Transformers Model)), etc.
 
         # Train!
-        if is_torch_tpu_available():
-            total_train_batch_size = self.args.train_batch_size * xm.xrt_world_size()
-        else:
-            total_train_batch_size = (
-                    self.args.train_batch_size
-                    * self.args.gradient_accumulation_steps
-                    * (torch.distributed.get_world_size() if self.args.local_rank != -1 else 1)
-            )
+        total_train_batch_size = (
+                self.args.train_batch_size
+                * self.args.gradient_accumulation_steps
+                * (torch.distributed.get_world_size() if self.args.local_rank != -1 else 1)
+        )
 
         num_examples = (
             self.num_examples(train_dataloader)
@@ -483,9 +466,7 @@ class CLTrainer(Trainer):
                             )
 
                     # Optimizer step
-                    if is_torch_tpu_available():
-                        xm.optimizer_step(self.optimizer)
-                    elif self.use_amp:
+                    if self.use_amp:
                         self.scaler.step(self.optimizer)
                         self.scaler.update()
                     else:
@@ -508,14 +489,10 @@ class CLTrainer(Trainer):
             self._maybe_log_save_evaluate(tr_loss, model, trial, epoch)
 
             if self.args.tpu_metrics_debug or self.args.debug:
-                if is_torch_tpu_available():
-                    # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
-                    xm.master_print(met.metrics_report())
-                else:
-                    logger.warning(
-                        "You enabled PyTorch/XLA debug metrics but you don't have a TPU "
-                        "configured. Check your training configuration if this is unexpected."
-                    )
+                logger.warning(
+                    "You enabled PyTorch/XLA debug metrics but you don't have a TPU "
+                    "configured. Check your training configuration if this is unexpected."
+                )
             if self.control.should_training_stop:
                 break
 
