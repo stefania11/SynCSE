@@ -183,11 +183,8 @@ class DataTrainingArguments:
     def __post_init__(self):
         if self.dataset_name is None and self.train_file is None:
             raise ValueError("Need either a dataset name or a training file.")
-                # assert extension in ["csv", "json", "txt"], "`train_file` should be a csv, a json or a txt file."
-         #      assert extension in ["csv", "json", "txt"], "`train_file` should be a csv, a json or a txt file."
+        # assert extension in ["csv", "json", "txt"], "`train_file` should be a csv, a json or a txt file."
 
-
-# Removed duplicate import statements and logger definition
 
 @dataclass
 class OurTrainingArguments(TrainingArguments):
@@ -555,33 +552,33 @@ def main():
     # Training
     if training_args.do_train:
         print("Starting the training loop...")
-try:
-        logger.info("Starting the training process")
-        model_path = (
-            model_args.model_name_or_path
-            if (model_args.model_name_or_path is not None and os.path.isdir(model_args.model_name_or_path))
-            else None
-        )
-        train_result = trainer.train(model_path=model_path)
-        logger.info("Initiating model saving process.")
-        trainer.save_model()  # Saves the tokenizer too for easy upload
-        logger.info("Model saving process completed.")
-        logger.info("Model saved, writing train results to file")
+        try:
+            logger.info("Starting the training process")
+            model_path = (
+                model_args.model_name_or_path
+                if (model_args.model_name_or_path is not None and os.path.isdir(model_args.model_name_or_path))
+                else None
+            )
+            train_result = trainer.train(model_path=model_path)
+            logger.info("Initiating model saving process.")
+            trainer.save_model()  # Saves the tokenizer too for easy upload
+            logger.info("Model saving process completed.")
+            logger.info("Model saved, writing train results to file")
 
-        output_train_file = os.path.join(training_args.output_dir, "train_results.txt")
-        if trainer.is_world_process_zero():
-            with open(output_train_file, "w") as writer:
-                logger.info("***** Train results *****")
-                for key, value in sorted(train_result.metrics.items()):
-                    logger.info(f"  {key} = {value}")
-                    writer.write(f"{key} = {value}\n")
+            output_train_file = os.path.join(training_args.output_dir, "train_results.txt")
+            if trainer.is_world_process_zero():
+                with open(output_train_file, "w") as writer:
+                    logger.info("***** Train results *****")
+                    for key, value in sorted(train_result.metrics.items()):
+                        logger.info(f"  {key} = {value}")
+                        writer.write(f"{key} = {value}\n")
 
-        # Need to save the state, since Trainer.save_model saves only the tokenizer with the model
-        trainer.state.save_to_json(os.path.join(training_args.output_dir, "trainer_state.json"))
-except Exception as e:
-    print(f'An error occurred during training: {e}')
-    raise e
-        print("Training loop completed.")
+            # Need to save the state, since Trainer.save_model saves only the tokenizer with the model
+            trainer.state.save_to_json(os.path.join(training_args.output_dir, "trainer_state.json"))
+    except Exception as e:
+        print(f'An error occurred during training: {e}')
+            raise e
+print("Training loop completed.")
 
     # Evaluation
     results = {}
