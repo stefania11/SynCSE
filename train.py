@@ -435,27 +435,19 @@ def main():
                 examples[sent0_cname][idx] = " "
             if examples[sent1_cname][idx] is None:
                 examples[sent1_cname][idx] = " "
-        sentences = examples[sent0_cname] + examples[sent1_cname]
-        # If hard negative exists
-        if sent2_cname is not None and SUP:
-            for idx in range(total):
-                if examples[sent2_cname][idx] is None:
-                    examples[sent2_cname][idx] = " "
-            sentences += examples[sent2_cname]
-
+        # Pair sentences together before tokenization
+        sentence_pairs = [(examples[sent0_cname][idx], examples[sent1_cname][idx]) for idx in range(total)]
+        # Tokenize sentence pairs
         sent_features = tokenizer(
-            sentences,
+            sentence_pairs,
             max_length=data_args.max_seq_length,
             truncation=True,
             padding="max_length" if data_args.pad_to_max_length else False,
         )
+        # Format features for model input
         features = {}
-        if sent2_cname is not None and SUP:
-            for key in sent_features:
-                features[key] = [[sent_features[key][i], sent_features[key][i+total], sent_features[key][i+total*2]] for i in range(total)]
-        else:
-            for key in sent_features:
-                features[key] = [[sent_features[key][i], sent_features[key][i+total]] for i in range(total)]
+        for key in sent_features:
+            features[key] = [sent_features[key][i:i+total] for i in range(0, len(sent_features[key]), total)]
 
         return features
 
