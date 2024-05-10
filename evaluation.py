@@ -29,7 +29,8 @@ def print_table(task_names, scores):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name_or_path", type=str,
+    parser.add_argument("--model_name_or_path", type=str, required=False,
+                        default="sjtu-lit/SynCSE-partial-RoBERTa-base",
                         help="Transformers' model name or path")
     parser.add_argument("--pooler", type=str,
                         choices=['cls', 'cls_before_pooler', 'avg', 'avg_top2', 'avg_first_last'],
@@ -48,12 +49,14 @@ def main():
                                  'MR', 'CR', 'MPQA', 'SUBJ', 'SST2', 'TREC', 'MRPC',
                                  'SICKRelatedness', 'STSBenchmark'],
                         help="Tasks to evaluate on. If '--task_set' is specified, this will be overridden")
+    parser.add_argument("--hf_token", type=str, default=os.getenv('HF_TOKEN'),
+                        help="Hugging Face authentication token")
 
     args = parser.parse_args()
 
     # Load transformers' model checkpoint
-    model = AutoModel.from_pretrained(args.model_name_or_path)
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
+    model = AutoModel.from_pretrained(args.model_name_or_path, use_auth_token=args.hf_token if args.hf_token else None)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, use_auth_token=args.hf_token if args.hf_token else None)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
 
@@ -204,6 +207,9 @@ def main():
         task_names.append("Avg.")
         scores.append("%.2f" % (sum([float(score) for score in scores]) / len(scores)))
         print_table(task_names, scores)
+
+if __name__ == "__main__":
+    main()
 
 
 if __name__ == "__main__":
