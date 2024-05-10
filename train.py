@@ -384,8 +384,12 @@ def main():
                 # Adjust the keys in the pre-trained model's state dictionary to match RobertaLMHead's expected keys
                 roberta_state_dict = {}
                 for key, value in pretrained_model.cls.predictions.state_dict().items():
-                    # The BERT model uses 'transform.dense' and 'transform.LayerNorm' as prefixes, but RobertaLMHead expects 'dense' and 'layer_norm'
-                    new_key = key.replace('transform.dense', 'dense').replace('transform.LayerNorm', 'layer_norm')
+                    # Correct the key names to match RobertaLMHead's expected keys
+                    new_key = key
+                    if 'transform.dense' in key:
+                        new_key = key.replace('transform.dense', 'dense')
+                    elif 'transform.LayerNorm' in key:
+                        new_key = key.replace('transform.LayerNorm', 'layer_norm')
                     roberta_state_dict[new_key] = value
 
                 # Load the adjusted state dictionary into the model's lm_head
