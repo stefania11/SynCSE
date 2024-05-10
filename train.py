@@ -420,23 +420,21 @@ def main():
         sent1_cname = column_names[1]
         sent2_cname = column_names[3]
     def prepare_features(examples):
-        # padding = longest (default)
-        #   If no sentence in the batch exceed the max length, then use
-        #   the max sentence length in the batch, otherwise use the
-        #   max sentence length in the argument and truncate those that
-        #   exceed the max length.
-        # padding = max_length (when pad_to_max_length, for pressure test)
-        #   All sentences are padded/truncated to data_args.max_seq_length.
-        SUP=True
         total = len(examples[sent0_cname])
-        # Avoid "None" fields
+        # Avoid "None" fields and ensure each sentence is a string
         for idx in range(total):
-            if examples[sent0_cname][idx] is None:
-                examples[sent0_cname][idx] = " "
-            if examples[sent1_cname][idx] is None:
-                examples[sent1_cname][idx] = " "
+            examples[sent0_cname][idx] = examples[sent0_cname][idx] or " "
+            examples[sent1_cname][idx] = examples[sent1_cname][idx] or " "
         # Pair sentences together before tokenization
-        sentence_pairs = [(examples[sent0_cname][idx], examples[sent1_cname][idx]) for idx in range(total)]
+        sentence_pairs = [(str(examples[sent0_cname][idx]), str(examples[sent1_cname][idx])) for idx in range(total)]
+        # If hard negative exists, handle it appropriately
+        if sent2_cname is not None:
+            for idx in range(total):
+                examples[sent2_cname][idx] = examples[sent2_cname][idx] or " "
+            # Create separate pairs for hard negatives
+            hard_negative_pairs = [(str(examples[sent0_cname][idx]), str(examples[sent2_cname][idx])) for idx in range(total)]
+            # Combine the sentence pairs and hard negative pairs into one list for tokenization
+            sentence_pairs.extend(hard_negative_pairs)
         # Tokenize sentence pairs
         sent_features = tokenizer(
             sentence_pairs,
@@ -445,10 +443,7 @@ def main():
             padding="max_length" if data_args.pad_to_max_length else False,
         )
         # Format features for model input
-        features = {}
-        for key in sent_features:
-            features[key] = [sent_features[key][i:i+total] for i in range(0, len(sent_features[key]), total)]
-
+        features = {key: sent_features[key] for key in sent_features}
         return features
 
     if training_args.do_train:
