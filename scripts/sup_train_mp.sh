@@ -17,7 +17,8 @@ export OMP_NUM_THREADS=1
 # python train.py \
 
 model=roberta-base
-dataset=sjtu-lit/SynCSE-partial-NLI
+# Update the dataset variable to point to the new CSV file
+dataset=/home/ubuntu/SynCSE/turku_paraphrase_corpus_train.csv
 CUDA_VISIBLE_DEVICES=0 torchrun --nproc_per_node $NUM_GPU --master_port $PORT_ID train.py \
     --model_name_or_path ${model} \
     --train_file  ${dataset} \
