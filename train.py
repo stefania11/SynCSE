@@ -310,6 +310,7 @@ def main():
     #
     # In distributed training, the load_dataset function guarantee that only one local process can concurrently
     # download the dataset.
+    print("Starting dataset loading...")
     data_files = {}
 
     if data_args.train_file is not None:
@@ -320,10 +321,11 @@ def main():
     if extension == "csv":
         datasets = load_dataset(extension, data_files=data_files, cache_dir="./data/", delimiter="\t" if "tsv" in data_args.train_file else ",")
     else:
-        print("load huggging face dataset")
+        print("Loading Hugging Face dataset...")
         datasets = load_dataset(data_args.train_file, cache_dir="./data/")
 
     datasets = datasets.shuffle(seed=42)
+    print("Dataset loaded successfully.")
     #datasets['train'] = datasets["train"].select(range(275497))
     # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
     # https://huggingface.co/docs/datasets/loading_datasets.html.
@@ -332,6 +334,7 @@ def main():
     # Distributed training:
     # The .from_pretrained methods guarantee that only one local process can concurrently
     # download model & vocab.
+    print("Initializing model and tokenizer...")
     config_kwargs = {
         "cache_dir": model_args.cache_dir,
         "revision": model_args.model_revision,
@@ -362,6 +365,7 @@ def main():
         )
 
     logger.info("Model and tokenizer are successfully loaded.")
+    print("Model and tokenizer initialization completed.")
 
     if model_args.model_name_or_path:
         model_class = None
@@ -402,6 +406,7 @@ def main():
         raise NotImplementedError("Model name or path must be provided.")
 
     model.resize_token_embeddings(len(tokenizer))
+    print("Model and tokenizer initialization completed.")
 
     # Prepare features
     column_names = datasets["train"].column_names
@@ -549,6 +554,7 @@ def main():
 
     # Training
     if training_args.do_train:
+        print("Starting the training loop...")
         logger.info("Starting the training process")
         model_path = (
             model_args.model_name_or_path
@@ -569,8 +575,9 @@ def main():
                     logger.info(f"  {key} = {value}")
                     writer.write(f"{key} = {value}\n")
 
-            # Need to save the state, since Trainer.save_model saves only the tokenizer with the model
-            trainer.state.save_to_json(os.path.join(training_args.output_dir, "trainer_state.json"))
+        # Need to save the state, since Trainer.save_model saves only the tokenizer with the model
+        trainer.state.save_to_json(os.path.join(training_args.output_dir, "trainer_state.json"))
+        print("Training loop completed.")
 
     # Evaluation
     results = {}
