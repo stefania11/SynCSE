@@ -170,9 +170,6 @@ class CLTrainer(Trainer):
                     self.deepspeed.save_checkpoint(output_dir)
 
                 # Save optimizer and scheduler
-                if self.sharded_dpp:
-                    self.optimizer.consolidate_state_dict()
-
                 if self.is_world_process_zero() and not self.deepspeed:
                     # deepspeed.save_checkpoint above saves model/optim/sched
                     torch.save(self.optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
@@ -206,9 +203,6 @@ class CLTrainer(Trainer):
                 self.deepspeed.save_checkpoint(output_dir)
 
             # Save optimizer and scheduler
-            if self.sharded_dpp:
-                self.optimizer.consolidate_state_dict()
-
             if self.is_world_process_zero() and not self.deepspeed:
                 # deepspeed.save_checkpoint above saves model/optim/sched
                 torch.save(self.optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
@@ -309,22 +303,9 @@ class CLTrainer(Trainer):
         if self.args.n_gpu > 1:
             model = torch.nn.DataParallel(model)
 
-        # Distributed training (should be after apex fp16 initialization)
-        if self.sharded_dpp:
-            model = ShardedDDP(model, self.optimizer)
-        elif self.args.local_rank != -1:
-            model = torch.nn.parallel.DistributedDataParallel(
-                model,
-                device_ids=[self.args.local_rank],
-                output_device=self.args.local_rank,
-                find_unused_parameters=(
-                    not getattr(model.config, "gradient_checkpointing", False)
-                    if isinstance(model, PreTrainedModel)
-                    else True
-                ),
-            )
-            # find_unused_parameters breaks checkpointing as per
-            # https://github.com/huggingface/transformers/pull/4659#issuecomment-643356021
+        # Commented out to prevent AttributeError related to 'sharded_dpp'
+        # if self.args.sharded_dpp:
+        #     model = ShardedDataParallel(model)
 
         # for the rest of this function `model` is the outside model, whether it was wrapped or not
         if model is not self.model:
