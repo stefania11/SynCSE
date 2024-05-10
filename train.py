@@ -360,8 +360,17 @@ def main():
         )
 
     if model_args.model_name_or_path:
-        if 'roberta' in model_args.model_name_or_path:
-            model = RobertaForCL.from_pretrained(
+        model_class = None
+        model_name_lower = model_args.model_name_or_path.lower()
+        if 'roberta' in model_name_lower:
+            model_class = RobertaForCL
+        elif 'bert' in model_name_lower:
+            model_class = BertForCL
+        else:
+            raise ValueError("The model name or path must contain 'roberta' or 'bert'.")
+
+        if model_class is not None:
+            model = model_class.from_pretrained(
                 model_args.model_name_or_path,
                 from_tf=bool(".ckpt" in model_args.model_name_or_path),
                 config=config,
@@ -370,25 +379,11 @@ def main():
                 use_auth_token=True if model_args.use_auth_token else None,
                 model_args=model_args
             )
-        elif 'bert' in model_args.model_name_or_path:
-            model = BertForCL.from_pretrained(
-                model_args.model_name_or_path,
-                from_tf=bool(".ckpt" in model_args.model_name_or_path),
-                config=config,
-                cache_dir=model_args.cache_dir,
-                revision=model_args.model_revision,
-                use_auth_token=True if model_args.use_auth_token else None,
-                model_args=model_args
-            )
-            if model_args.do_mlm:
+            if 'bert' in model_name_lower and model_args.do_mlm:
                 pretrained_model = BertForPreTraining.from_pretrained(model_args.model_name_or_path)
                 model.lm_head.load_state_dict(pretrained_model.cls.predictions.state_dict())
-        else:
-            raise NotImplementedError
     else:
-        raise NotImplementedError
-        logger.info("Training new model from scratch")
-        model = AutoModelForMaskedLM.from_config(config)
+        raise NotImplementedError("Model name or path must be provided.")
 
     model.resize_token_embeddings(len(tokenizer))
 
