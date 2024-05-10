@@ -8,6 +8,7 @@ from typing import Optional, Union, List, Dict, Tuple
 import torch
 import collections
 import random
+from torch.utils.data.distributed import DistributedSampler
 
 from datasets import load_dataset
 
