@@ -39,6 +39,7 @@ from simcse.models import RobertaForCL, BertForCL
 from simcse.trainers import CLTrainer
 
 from accelerate.utils import GradientAccumulationPlugin
+from accelerate.state import PartialState
 
 logger = logging.getLogger(__name__)
 MODEL_CONFIG_CLASSES = list(MODEL_FOR_MASKED_LM_MAPPING.keys())
@@ -185,6 +186,8 @@ class DataTrainingArguments:
          #      assert extension in ["csv", "json", "txt"], "`train_file` should be a csv, a json or a txt file."
 
 
+# Removed duplicate import statements and logger definition
+
 @dataclass
 class OurTrainingArguments(TrainingArguments):
     # Evaluation
@@ -196,7 +199,15 @@ class OurTrainingArguments(TrainingArguments):
         metadata={"help": "Evaluate transfer task dev sets (in validation)."}
     )
     # Attribute to manage distributed training state, initialized as None and will be set up in the training script
-    distributed_state: Optional[PartialState] = None
+    distributed_state: Optional[PartialState] = field(default=None, metadata={"help": "State for distributed training setup."})
+
+    def __post_init__(self):
+        super().__post_init__()
+        if self.local_rank != -1:
+            self.distributed_state = PartialState()
+        elif self.distributed_state is None:
+            self.distributed_state = None
+        # Ensure distributed_state is not reinitialized if already set
 
     @cached_property
     def _setup_devices(self) -> "torch.device":
@@ -357,7 +368,7 @@ def main():
                 cache_dir=model_args.cache_dir,
                 revision=model_args.model_revision,
                 use_auth_token=True if model_args.use_auth_token else None,
-                model_args=model_args                  
+                model_args=model_args
             )
         elif 'bert' in model_args.model_name_or_path:
             model = BertForCL.from_pretrained(
@@ -404,14 +415,14 @@ def main():
     def prepare_features(examples):
         # padding = longest (default)
         #   If no sentence in the batch exceed the max length, then use
-        #   the max sentence length in the batch, otherwise use the 
+        #   the max sentence length in the batch, otherwise use the
         #   max sentence length in the argument and truncate those that
         #   exceed the max length.
         # padding = max_length (when pad_to_max_length, for pressure test)
         #   All sentences are padded/truncated to data_args.max_seq_length.
         SUP=True
         total = len(examples[sent0_cname])
-        # Avoid "None" fields 
+        # Avoid "None" fields
         for idx in range(total):
             if examples[sent0_cname][idx] is None:
                 examples[sent0_cname][idx] = " "
@@ -438,7 +449,7 @@ def main():
         else:
             for key in sent_features:
                 features[key] = [[sent_features[key][i], sent_features[key][i+total]] for i in range(total)]
-            
+
         return features
 
     if training_args.do_train:
@@ -493,7 +504,7 @@ def main():
                 del batch["label_ids"]
 
             return batch
-        
+
         def mask_tokens(
             self, inputs: torch.Tensor, special_tokens_mask: Optional[torch.Tensor] = None
         ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -537,6 +548,9 @@ def main():
         tokenizer=tokenizer,
         data_collator=data_collator,
     )
+    if training_args.distributed_state is not None:
+        trainer.distributed_state = training_args.distributed_state
+
     trainer.model_args = model_args
 
     # Training
