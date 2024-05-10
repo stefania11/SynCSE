@@ -39,8 +39,9 @@ class STSEval(object):
             not_empty_idx = raw_scores != ''
 
             gs_scores = [float(x) for x in raw_scores[not_empty_idx]]
-            sent1 = [s.split() for s in sent1][not_empty_idx]
-            sent2 = [s.split() for s in sent2][not_empty_idx]
+            not_empty_indices = np.where(not_empty_idx)[0]
+            sent1 = [sent1[i].split() for i in not_empty_indices]
+            sent2 = [sent2[i].split() for i in not_empty_indices]
             # sort data by length to minimize padding in batcher
             sorted_data = sorted(zip(sent1, sent2, gs_scores),
                                   key=lambda z: (len(z[0]), len(z[1]), z[2]))
