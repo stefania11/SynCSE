@@ -381,7 +381,15 @@ def main():
             )
             if 'bert' in model_name_lower and model_args.do_mlm:
                 pretrained_model = BertForPreTraining.from_pretrained(model_args.model_name_or_path)
-                model.lm_head.load_state_dict(pretrained_model.cls.predictions.state_dict())
+                # Adjust the keys in the pre-trained model's state dictionary to match RobertaLMHead's expected keys
+                roberta_state_dict = {}
+                for key, value in pretrained_model.cls.predictions.state_dict().items():
+                    # The BERT model uses 'transform.dense' and 'transform.LayerNorm' as prefixes, but RobertaLMHead expects 'dense' and 'layer_norm'
+                    new_key = key.replace('transform.dense', 'dense').replace('transform.LayerNorm', 'layer_norm')
+                    roberta_state_dict[new_key] = value
+
+                # Load the adjusted state dictionary into the model's lm_head
+                model.lm_head.load_state_dict(roberta_state_dict, strict=False)
     else:
         raise NotImplementedError("Model name or path must be provided.")
 
