@@ -167,6 +167,7 @@ def cl_forward(cls,
     z1, z2 = pooler_output[:,0], pooler_output[:,1]
 
     # Hard negative
+    z3 = torch.zeros_like(z1)  # Initialize z3 with a default value
     if num_sent == 3:
         z3 = pooler_output[:, 2]
 
