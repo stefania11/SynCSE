@@ -31,7 +31,6 @@ from transformers.file_utils import (
     is_apex_available,
     is_datasets_available,
     is_in_notebook,
-    is_torch_tpu_available,
 )
 from transformers.trainer_callback import (
     CallbackHandler,
@@ -53,13 +52,8 @@ import torch.nn as nn
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Dataset
-from torch.utils.data.distributed import DistributedSampler
-from torch.utils.data.sampler import RandomSampler, SequentialSampler
 
-if is_torch_tpu_available():
-    import torch_xla.core.xla_model as xm
-    import torch_xla.debug.metrics as met
-    import torch_xla.distributed.parallel_loader as pl
+# Removed TPU-specific code for saving optimizer states as TPUs are not available
 
 if is_apex_available():
     from apex import amp
