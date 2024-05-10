@@ -35,7 +35,7 @@ CUDA_VISIBLE_DEVICES=0 python3 -m torch.distributed.launch --nproc_per_node $NUM
     --temp 0.05 \
     --do_train \
     --do_eval \
-    --fp16 \
+    # --fp16 \  # Removed FP16 flag as the current environment does not support FP16 mixed precision training
     --seed 42 \
     --do_mlm \
     --hard_negative_weight 0 \
