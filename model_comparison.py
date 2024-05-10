@@ -4,8 +4,8 @@ from scipy.spatial.distance import cosine
 import numpy as np
 
 # Load tokenizer and model
-tokenizer = AutoTokenizer.from_pretrained("sjtu-lit/SynCSE-partial-RoBERTa-large")
-model = AutoModel.from_pretrained("sjtu-lit/SynCSE-partial-RoBERTa-large")
+tokenizer = AutoTokenizer.from_pretrained("sjtu-lit/SynCSE-scratch-RoBERTa-base")
+model = AutoModel.from_pretrained("sjtu-lit/SynCSE-scratch-RoBERTa-base")
 
 sentences = [
     "green light in laundry",
