@@ -452,7 +452,7 @@ class CLTrainer(Trainer):
                     if self.args.max_grad_norm is not None and self.args.max_grad_norm > 0 and not self.deepspeed:
                         # deepspeed does its own clipping
 
-                        if self.use_amp:
+                        if self.args.fp16:
                             # AMP: gradients need unscaling
                             self.scaler.unscale_(self.optimizer)
 
@@ -467,7 +467,7 @@ class CLTrainer(Trainer):
                             )
 
                     # Optimizer step
-                    if self.use_amp:
+                    if self.args.fp16:
                         self.scaler.step(self.optimizer)
                         self.scaler.update()
                     else:
