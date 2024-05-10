@@ -34,7 +34,7 @@ from transformers import (
 from transformers.tokenization_utils_base import BatchEncoding, PaddingStrategy, PreTrainedTokenizerBase
 from transformers.trainer_utils import is_main_process
 from transformers.data.data_collator import DataCollatorForLanguageModeling
-from transformers.file_utils import cached_property, torch_required, is_torch_available, is_torch_tpu_available
+from transformers.file_utils import cached_property, is_torch_available
 from simcse.models import RobertaForCL, BertForCL
 from simcse.trainers import CLTrainer
 
@@ -98,7 +98,7 @@ class ModelArguments:
         metadata={
             "help": "What kind of pooler to use (cls, cls_before_pooler, avg, avg_top2, avg_first_last)."
         }
-    ) 
+    )
     hard_negative_weight: float = field(
         default=0,
         metadata={
@@ -188,7 +188,7 @@ class DataTrainingArguments:
 @dataclass
 class OurTrainingArguments(TrainingArguments):
     # Evaluation
-    ## By default, we evaluate STS (dev) during training (for selecting best checkpoints) and evaluate 
+    ## By default, we evaluate STS (dev) during training (for selecting best checkpoints) and evaluate
     ## both STS and transfer tasks (dev) at the end of training. Using --eval_transfer will allow evaluating
     ## both STS and transfer tasks (dev) during training.
     eval_transfer: bool = field(
@@ -197,15 +197,10 @@ class OurTrainingArguments(TrainingArguments):
     )
 
     @cached_property
-    @torch_required
     def _setup_devices(self) -> "torch.device":
         logger.info("PyTorch: setting up devices")
         if self.no_cuda:
             device = torch.device("cpu")
-            self._n_gpu = 0
-        elif is_torch_tpu_available():
-            import torch_xla.core.xla_model as xm
-            device = xm.xla_device()
             self._n_gpu = 0
         elif self.local_rank == -1:
             # if n_gpu is > 1 we'll use nn.DataParallel.
