@@ -255,6 +255,7 @@ class OurTrainingArguments(TrainingArguments):
 
 
 def main():
+    logger.info("Starting training script execution")
     # See all possible arguments in src/transformers/training_args.py
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
@@ -360,6 +361,8 @@ def main():
             "You can do it from another script, save it, and load it from here, using --tokenizer_name."
         )
 
+    logger.info("Model and tokenizer are successfully loaded.")
+
     if model_args.model_name_or_path:
         model_class = None
         model_name_lower = model_args.model_name_or_path.lower()
@@ -439,6 +442,8 @@ def main():
         features = {key: sent_features[key] for key in sent_features}
         return features
 
+    logger.info("Starting to prepare the dataset.")
+
     if training_args.do_train:
         train_dataset = datasets["train"].map(
             prepare_features,
@@ -447,6 +452,8 @@ def main():
             remove_columns=column_names,
             load_from_cache_file=not data_args.overwrite_cache,
         )
+
+    logger.info("Dataset preparation completed.")
 
     # Data collator
     @dataclass
@@ -542,13 +549,17 @@ def main():
 
     # Training
     if training_args.do_train:
+        logger.info("Starting the training process")
         model_path = (
             model_args.model_name_or_path
             if (model_args.model_name_or_path is not None and os.path.isdir(model_args.model_name_or_path))
             else None
         )
         train_result = trainer.train(model_path=model_path)
+        logger.info("Initiating model saving process.")
         trainer.save_model()  # Saves the tokenizer too for easy upload
+        logger.info("Model saving process completed.")
+        logger.info("Model saved, writing train results to file")
 
         output_train_file = os.path.join(training_args.output_dir, "train_results.txt")
         if trainer.is_world_process_zero():
@@ -564,7 +575,7 @@ def main():
     # Evaluation
     results = {}
     if training_args.do_eval:
-        logger.info("*** Evaluate ***")
+        logger.info("Starting evaluation")
         results = trainer.evaluate(eval_senteval_transfer=True)
 
         output_eval_file = os.path.join(training_args.output_dir, "eval_results.txt")
