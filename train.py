@@ -421,20 +421,12 @@ def main():
         sent2_cname = column_names[3]
     def prepare_features(examples):
         total = len(examples[sent0_cname])
-        # Avoid "None" fields and ensure each sentence is a string
+        sentence_pairs = []
         for idx in range(total):
-            examples[sent0_cname][idx] = examples[sent0_cname][idx] or " "
-            examples[sent1_cname][idx] = examples[sent1_cname][idx] or " "
-        # Pair sentences together before tokenization
-        sentence_pairs = [(str(examples[sent0_cname][idx]), str(examples[sent1_cname][idx])) for idx in range(total)]
-        # If hard negative exists, handle it appropriately
-        if sent2_cname is not None:
-            for idx in range(total):
-                examples[sent2_cname][idx] = examples[sent2_cname][idx] or " "
-            # Create separate pairs for hard negatives
-            hard_negative_pairs = [(str(examples[sent0_cname][idx]), str(examples[sent2_cname][idx])) for idx in range(total)]
-            # Combine the sentence pairs and hard negative pairs into one list for tokenization
-            sentence_pairs.extend(hard_negative_pairs)
+            # Ensure that both sentences are strings and not None
+            sent0 = str(examples[sent0_cname][idx]) if examples[sent0_cname][idx] is not None else ""
+            sent1 = str(examples[sent1_cname][idx]) if examples[sent1_cname][idx] is not None else ""
+            sentence_pairs.append((sent0, sent1))
         # Tokenize sentence pairs
         sent_features = tokenizer(
             sentence_pairs,
