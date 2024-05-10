@@ -18,7 +18,7 @@ export OMP_NUM_THREADS=1
 
 model=roberta-base
 dataset=sjtu-lit/SynCSE-partial-NLI
-CUDA_VISIBLE_DEVICES=0 python3 -m torch.distributed.launch --nproc_per_node $NUM_GPU --master_port $PORT_ID train.py \
+CUDA_VISIBLE_DEVICES=0 torchrun --nproc_per_node $NUM_GPU --master_port $PORT_ID train.py \
     --model_name_or_path ${model} \
     --train_file  ${dataset} \
     --output_dir result/my-sup-simcse-${model}_${dataset} \
