@@ -38,6 +38,8 @@ from transformers.file_utils import cached_property, is_torch_available
 from simcse.models import RobertaForCL, BertForCL
 from simcse.trainers import CLTrainer
 
+from accelerate.utils import GradientAccumulationPlugin
+
 logger = logging.getLogger(__name__)
 MODEL_CONFIG_CLASSES = list(MODEL_FOR_MASKED_LM_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
@@ -131,7 +133,7 @@ class DataTrainingArguments:
     Arguments pertaining to what data we are going to input our model for training and eval.
     """
 
-    # Huggingface's original arguments. 
+    # Huggingface's original arguments.
     dataset_name: Optional[str] = field(
         default=None, metadata={"help": "The name of the dataset to use (via the datasets library)."}
     )
@@ -154,7 +156,7 @@ class DataTrainingArguments:
 
     # SimCSE's arguments
     train_file: Optional[str] = field(
-        default=None, 
+        default=None,
         metadata={"help": "The training data file (.txt or .csv)."}
     )
     max_seq_length: Optional[int] = field(
@@ -172,7 +174,7 @@ class DataTrainingArguments:
         },
     )
     mlm_probability: float = field(
-        default=0.15, 
+        default=0.15,
         metadata={"help": "Ratio of tokens to mask for MLM (only effective if --do_mlm)"}
     )
 
@@ -193,6 +195,8 @@ class OurTrainingArguments(TrainingArguments):
         default=False,
         metadata={"help": "Evaluate transfer task dev sets (in validation)."}
     )
+    # Attribute to manage distributed training state, initialized as None and will be set up in the training script
+    distributed_state: Optional[PartialState] = None
 
     @cached_property
     def _setup_devices(self) -> "torch.device":
